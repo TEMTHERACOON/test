@@ -1,7 +1,5 @@
-
 const game = document.getElementById("game")
 const bird = document.getElementById("bird")
-
 const bgMusic = document.getElementById("bg-music")
 let birdY = 300
 let velocity = 0
@@ -14,9 +12,7 @@ let animationId = null
 let pipeIntervalId = null
 
 function startGame() {
-
   if (!gameStarted) {
-    
     gameStarted = true
     gameOver = false
     birdY = 300
@@ -28,15 +24,14 @@ function startGame() {
     bgMusic.volume = 0.4   
     bgMusic.play()
 
-    
     pipes.forEach(pipe => {
-      pipe.topPipe.remove()
-      pipe.bottomPipe.remove()
+      if (pipe.topPipe && pipe.topPipe.parentNode) pipe.topPipe.remove()
+      if (pipe.bottomPipe && pipe.bottomPipe.parentNode) pipe.bottomPipe.remove()
     })
     pipes = []
     
     if (pipeIntervalId) clearInterval(pipeIntervalId)
-    pipeIntervalId = setInterval(createPipe, 1500)
+    pipeIntervalId = setInterval(createPipe, 2000)
     
     update()
   }
@@ -44,7 +39,7 @@ function startGame() {
 
 function jump() {
   if (!gameOver) {
-    velocity = -6
+    velocity = -8
     if (!gameStarted) startGame()
   }
 }
@@ -58,19 +53,22 @@ document.addEventListener("touchstart", (e) => {
 function createPipe() {
   if (gameOver || !gameStarted) return
   
-  const gap = 180
-  const topHeight = Math.random() * 250 + 80
-  const bottomHeight = 550 - topHeight - gap
+  const gap = 200
+  const gameHeight = game.clientHeight
+  const minHeight = 60
+  const maxTopHeight = gameHeight - gap - minHeight
+  const topHeight = Math.random() * (maxTopHeight - minHeight) + minHeight
+  const bottomHeight = gameHeight - topHeight - gap
 
   const topPipe = document.createElement("div")
   topPipe.className = "pipe top"
   topPipe.style.height = topHeight + "px"
-  topPipe.style.left = "1000px"
+  topPipe.style.left = game.clientWidth + "px"
 
   const bottomPipe = document.createElement("div")
   bottomPipe.className = "pipe bottom"
   bottomPipe.style.height = bottomHeight + "px"
-  bottomPipe.style.left = "1000px"
+  bottomPipe.style.left = game.clientWidth + "px"
 
   game.appendChild(topPipe)
   game.appendChild(bottomPipe)
@@ -79,7 +77,9 @@ function createPipe() {
 }
 
 function update() {
-  if (gameOver || !gameStarted) {
+  if (!gameStarted) return
+
+  if (gameOver) {
     if (animationId) cancelAnimationFrame(animationId)
     return
   }
@@ -88,31 +88,34 @@ function update() {
   birdY += velocity
   bird.style.top = birdY + "px"
 
+  const birdSize = bird.clientHeight
+  const gameHeight = game.clientHeight
+
   if (birdY < 0) {
     birdY = 0
     velocity = 0
   }
   
-  if (birdY > 600) {
+  if (birdY > gameHeight - birdSize) {
     endGame()
     return
   }
 
   const birdRect = {
-    x: 60,
+    x: parseFloat(bird.style.left) || 60,
     y: birdY,
-    width: 40,
-    height: 40
+    width: bird.clientWidth,
+    height: birdSize
   }
 
   pipes.forEach((pipe) => {
     let left = parseFloat(pipe.topPipe.style.left)
-    left -= 3
+    left -= 4
     pipe.topPipe.style.left = left + "px"
     pipe.bottomPipe.style.left = left + "px"
 
     const pipeX = left
-    const pipeWidth = 80
+    const pipeWidth = pipe.topPipe.clientWidth
     
     if (!pipe.passed && pipeX + pipeWidth < birdRect.x) {
       pipe.passed = true
@@ -126,7 +129,7 @@ function update() {
       const bottomPipeHeight = parseFloat(pipe.bottomPipe.style.height)
       
       if (birdRect.y < topPipeHeight || 
-          birdRect.y + birdRect.height > 640 - bottomPipeHeight) {
+          birdRect.y + birdRect.height > gameHeight - bottomPipeHeight) {
         endGame()
         return
       }
@@ -134,9 +137,9 @@ function update() {
   })
 
   pipes = pipes.filter(pipe => {
-    if (parseFloat(pipe.topPipe.style.left) < -80) {
-      pipe.topPipe.remove()
-      pipe.bottomPipe.remove()
+    if (parseFloat(pipe.topPipe.style.left) < -100) {
+      if (pipe.topPipe.parentNode) pipe.topPipe.remove()
+      if (pipe.bottomPipe.parentNode) pipe.bottomPipe.remove()
       return false
     }
     return true
